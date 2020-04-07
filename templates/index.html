@@ -4,7 +4,7 @@
 
 .line {
   fill: none;
-  stroke: steelblue;
+  stroke: #ADD8E6;
   stroke-width: 2px;
 }
 
@@ -159,9 +159,9 @@ circle.hidden {
         <li class="dropdown">
             <a href="javascript:void(0)" class="dropbtn">Task 1</a>
             <div class="dropdown-content">
-                <a href="#" onclick="create_scree_plot('screeplot_full_data')">PCA for Complete Dataset</a>
-                <a href="#" onclick="create_scree_plot('screeplot_random_sample_data')">PCA for Random Sample Dataset</a>
-                <a href="#" onclick="create_scree_plot('screeplot_stratified_sample_data')">PCA for Random Stratified Dataset</a>
+                <a href="#" onclick="create_scree_plot('screeplot_full_data', 'Screeplot for PCA on Complete Dataset')">PCA for Complete Dataset</a>
+                <a href="#" onclick="create_scree_plot('screeplot_random_sample_data', 'Screeplot for PCA on Randomly Sampled Dataset')">PCA for Random Sample Dataset</a>
+                <a href="#" onclick="create_scree_plot('screeplot_stratified_sample_data', 'Screeplot for PCA on Random Stratified Dataset')">PCA for Random Stratified Dataset</a>
             </div>
         </li>
         <li class="dropdown">
@@ -191,12 +191,30 @@ circle.hidden {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
 
+//Declaring legend color and value for elbow point graph
+var elbow_colors = ['#FFD700'];
+var elbow_legend_val = ['Elbow Point'];
 
+//Declaring Tooltip
 var tooltip = d3.select("body").append("div").attr("class", "toolTip");
-var ranks = ['0 to 100', '100 to 200', '200 to 300', '> 300'];
-var dimensionality = ['Intrinsic Dimensionality'];
-var colors_1 = ['Red'];
 
+//Declaring values for legend showing ranking of universities
+var ranks = ['0 to 100', '100 to 200', '200 to 300', '> 300'];
+
+//Declaring legend value for PCA screeplots
+var dimensionality = ['Intrinsic Dimensionality'];
+
+var colors_screeplot = ['#FFD700'];
+
+//Function to pick color for elbow curve
+function elbow_colorpicker(v) {
+    if (v === 4) {
+        return "#FFD700";
+    }
+    else {
+        return "white";
+    }
+}
 
 function colorPicker_mouseover(v) {
     if (v === "True") {
@@ -209,7 +227,7 @@ function colorPicker_mouseover(v) {
 
 function colorPicker_dot(v) {
     if (v === "True") {
-        return "red";
+        return "#FFD700";
     }
     else {
         return "white";
@@ -218,10 +236,10 @@ function colorPicker_dot(v) {
 
 function colorPicker_bar(v) {
     if (v === "True") {
-        return "red";
+        return "#FFD700";
     }
     else {
-        return "#87CEEB";
+        return "#D3D3D3";
     }
 }
 
@@ -278,7 +296,7 @@ function create_elbow(path)
                 .attr("cx", function(d) { return x(d.K) })
                 .attr("cy", function(d) { return y(d.Value) })
                 .attr("r", 5)
-                .style("fill", "blue")
+                .style("fill", function(d) {return elbow_colorpicker(d.K);})
                 .on("mouseover", function(d, i) {
                     tooltip
                         .style("left", d3.event.pageX - 50 + "px")
@@ -286,14 +304,12 @@ function create_elbow(path)
                         .style("display", "inline-block")
                     .html("K: " + d.K + "<br>" + "Value: " + d.Value.toFixed(2));
                     d3.select(this)
-                        .style("fill", "blue")
                         .attr("r", 10) ; })
 
                 .on("mouseout", function() {
                     tooltip
                         .style("display", "none");
                     d3.select(this)
-                        .style("fill", "blue")
                         .attr("r", 5); });
 
         svg.append("g")
@@ -303,6 +319,7 @@ function create_elbow(path)
         svg.append("text")
             .attr("transform", "translate(" + (width/2) + " ," + (height + margin.top) + ")")
                 .style("text-anchor", "middle")
+                .style("font-size", "15px")
             .text("K Value");
 
         // add the y Axis
@@ -315,11 +332,43 @@ function create_elbow(path)
             .attr("x",0 - (height / 2))
             .attr("dy", "1em")
                 .style("text-anchor", "middle")
-            .text("Value");
+                .style("font-size", "15px")
+            .text("Inertia");
+        
+        svg.append("text")
+            .attr("x", (width / 2))             
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")  
+                .style("font-size", "25px") 
+                .style("text-decoration", "underline")  
+            .text("K-Means Elbow Curve");
+        
+        var legend = svg.selectAll(".legend")
+            .data(elbow_colors)
+            .enter()
+            .append("g")
+            .attr("class", "legend")
+            .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("rect")
+            .data(elbow_colors)
+            .attr("x", width - 18)
+            .attr("y", 9)
+            .attr("width", 18)
+            .attr("height", 18)
+            .style("fill", function(d) { return d; });
+
+        legend.append("text")
+            .data(elbow_legend_val)
+            .attr("x", width - 24)
+            .attr("y", 18)
+            .attr("dy", ".35em")
+            .style("text-anchor", "end")
+            .text(function(d) { return d; });
     });
 }
 
-function create_scree_plot(path)
+function create_scree_plot(path, heading)
 {
     $.post(path, {'data': 'received'}, function (data_infunc) {
         data = JSON.parse(data_infunc.chart_data);
@@ -436,6 +485,7 @@ function create_scree_plot(path)
         svg.append("text")
             .attr("transform", "translate(" + (width/2) + " ," + (height + margin.top) + ")")
                 .style("text-anchor", "middle")
+                .style("font-size", "15px")
             .text("PC Number");
 
         // add the y Axis
@@ -448,17 +498,26 @@ function create_scree_plot(path)
             .attr("x",0 - (height / 2))
             .attr("dy", "1em")
                 .style("text-anchor", "middle")
+                .style("font-size", "15px")
             .text("Explained Variance Ratio");
 
+        svg.append("text")
+            .attr("x", (width / 2))             
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")  
+                .style("font-size", "25px") 
+                .style("text-decoration", "underline")  
+            .text(heading);
+
         var legend = svg.selectAll(".legend")
-            .data(colors_1)
+            .data(colors_screeplot)
             .enter()
             .append("g")
             .attr("class", "legend")
             .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
         legend.append("rect")
-            .data(colors_1)
+            .data(colors_screeplot)
             .attr("x", width - 18)
             .attr("y", 9)
             .attr("width", 18)

@@ -216,7 +216,7 @@ def calculate_mds(df, distance):
     list_uni = df['University'].tolist()
     list_rank = df['Rank'].tolist()
 
-    mds = MDS(n_components=2, dissimilarity='precomputed', n_jobs=4)
+    mds = MDS(n_components=2, dissimilarity='precomputed', n_jobs=-1)
 
     values = mds.fit_transform(matrix)
 
