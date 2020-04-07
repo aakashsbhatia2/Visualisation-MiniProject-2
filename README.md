@@ -15,3 +15,6 @@ Task 3: visualization of both original and 2 types of reduced data (40 points)
 - visualize the data projected into the top two PCA vectors via 2D scatterplot
 - visualize the data via MDS (Euclidian & correlation distance) in 2D scatterplots
 - visualize the scatterplot matrix of the three highest PCA loaded attributes
+
+Steps to run:
+python3 app.py
