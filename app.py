@@ -115,6 +115,7 @@ def mds_correlation_stratified_data():
 
 
 def calculate_intrinsic_dimensionality(df):
+    #variables to obtain required values to send to front-end. Count_2 holds the intrinsic dimensionality
     count = 0
     count_2 = 0
     sum = 0
@@ -122,12 +123,16 @@ def calculate_intrinsic_dimensionality(df):
     ptg_data = []
     list_intrinsic_dimensions = []
 
+    #performing PCA = 13
     pca = PCA(n_components=13)
 
+    #scaling the data using standardscalar()
     x = StandardScaler().fit_transform(df.loc[:, :'Overall_Ranking'])
     principal_components = pca.fit_transform(x)
     data = pca.explained_variance_ratio_
     data = data.tolist()
+    
+    #identifying the PC components contributing < 80% and storing them to send to front end
     for i in data:
         sum += i
         if sum<0.80:
@@ -157,6 +162,7 @@ def calculate_intrinsic_dimensionality(df):
                 list_pc_vector[j] = 'False'
             break
 
+    #convering the data to json to send it to front end.
     mapping = {"PC": list_pca, "Value": data, "Percent_data": ptg_data, "PC_T_F": list_pc_vector}
     df_combined = pd.DataFrame(mapping)
     mapping = df_combined.to_dict(orient="records")
@@ -165,9 +171,12 @@ def calculate_intrinsic_dimensionality(df):
     return data, list_intrinsic_dimensions, count_2
 
 def calculate_top_PC_Vals(df):
+
+    #Performing PCA for n=2
     pca = PCA(n_components=2)
 
-    x = MinMaxScaler().fit_transform(df.loc[:, :'Overall_Ranking'])
+    #Scaling data using 
+    x = StandardScaler().fit_transform(df.loc[:, :'Overall_Ranking'])
     pc = pca.fit_transform(x)
     data = pca.explained_variance_ratio_
     principal_Df = pd.DataFrame(data=pc, columns=['PC1', 'PC2'])
@@ -185,15 +194,21 @@ def calculate_top_attributes(df, list_intrinsic_dimensions, count):
     list_country = df['Country'].tolist()
     list_uni = df['University'].tolist()
     list_rank = df['Rank'].tolist()
+
+    #running PCA for the intrinsic dimensionality
     pca = PCA(n_components=count)
 
+    #transforming the values using standardscalar()
     x = StandardScaler().fit_transform(df_temp)
     pc1 = pca.fit_transform(x)
     data = pca.explained_variance_ratio_
     data = data.tolist()
+
+    #obtaining the loadings per column and storing them in a dataframe
     loadings = pd.DataFrame(pca.components_.T, columns= list_intrinsic_dimensions,
                             index=df_temp.columns)
 
+    #calculating the values with the highest PCA loadings
     for i in loadings:
         loadings[i] = loadings[i] ** 2
     loadings['sum'] = loadings.sum(axis=1)
@@ -202,6 +217,7 @@ def calculate_top_attributes(df, list_intrinsic_dimensions, count):
     df_final['University'] = list_uni
     df_final['Rank'] = list_rank
 
+    #formatting data to send to front end
     mapping = df_final.to_dict(orient="records")
     chart_data = json.dumps(mapping, indent=2)
     data = {'chart_data': chart_data}
@@ -239,14 +255,24 @@ def create_random_stratified_samples():
 
     global df1
 
+    #array to store sum of squared distances
     sum_of_squared_distances = []
+    #array to store k values
     k_vals = []
+    #array to store elbow values
     elbow_values = []
+
+    #performing k-means for k = 1 to k = 17
     for k in range(1,18):
+        #appending k value in k_vals array
         k_vals.append(k)
+        #running k-means function
         k_means = KMeans(n_clusters=k)
+        #fitting the values and appending them to sum_of_squared_distances array
         model = k_means.fit(df1.loc[:, :'Overall_Ranking'])
         sum_of_squared_distances.append(k_means.inertia_ * 10**-12)
+    
+    #transforming the data to be able to send it to front end
     elbow_values.append(k_vals)
     elbow_values.append(sum_of_squared_distances)
     final_elbow_vals = pd.DataFrame(elbow_values)
@@ -256,12 +282,13 @@ def create_random_stratified_samples():
     chart_data = json.dumps(mapping, indent=2)
     data = {'chart_data': chart_data}
 
+    #performing k-means for k=4 based on elbow point
     k_means = KMeans(n_clusters=4)
     model = k_means.fit(df1.loc[:, :'Overall_Ranking'])
-    y_hat = k_means.predict(df1.loc[:, :'Overall_Ranking'])
-    labels = k_means.labels_
-    df1['Cluster'] = y_hat
+    y = k_means.predict(df1.loc[:, :'Overall_Ranking'])
+    df1['Cluster'] = y
 
+    #sampling 25% of each cluster
     df_c0 = df1.loc[df1['Cluster'] == 0]
     df_c0_sample = df_c0.sample(frac=0.25)
 
@@ -274,10 +301,14 @@ def create_random_stratified_samples():
     df_c3 = df1.loc[df1['Cluster'] == 3]
     df_c3_sample = df_c3.sample(frac=0.25)
 
+    #appending the sampled data into a single dataframe and dropping the cluser column
     df_strat_samples = df_c0_sample.append(df_c1_sample.append(df_c2_sample.append(df_c3_sample)))
     df_strat_final = df_strat_samples.drop(columns='Cluster')
 
+    #storing the data into a .csv file
     df_strat_final.to_csv("random_stratified.csv", index=False)
+
+    #returning the k-values for plotting elbow curve
     return data
 
 if __name__ == "__main__":
