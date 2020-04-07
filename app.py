@@ -14,6 +14,11 @@ app = Flask(__name__)
 def index():
     return render_template("index.html", data = "")
 
+@app.route("/elbow-k-means", methods = ['POST'])
+def get_elbow():
+    global elbow_vals
+    return jsonify(elbow_vals)
+
 @app.route("/screeplot_full_data", methods = ['POST'])
 def scree_plot_full_data():
     global df1
@@ -107,6 +112,7 @@ def mds_correlation_stratified_data():
     global df3
     data = calculate_mds(df3, 'correlation')
     return jsonify(data)
+
 
 def calculate_intrinsic_dimensionality(df):
     count = 0
@@ -210,7 +216,7 @@ def calculate_mds(df, distance):
     list_uni = df['University'].tolist()
     list_rank = df['Rank'].tolist()
 
-    mds = MDS(n_components=2, dissimilarity='precomputed')
+    mds = MDS(n_components=2, dissimilarity='precomputed', n_jobs=4)
 
     values = mds.fit_transform(matrix)
 
@@ -232,6 +238,23 @@ def create_random_samples():
 def create_random_stratified_samples():
 
     global df1
+
+    sum_of_squared_distances = []
+    k_vals = []
+    elbow_values = []
+    for k in range(1,18):
+        k_vals.append(k)
+        k_means = KMeans(n_clusters=k)
+        model = k_means.fit(df1.loc[:, :'Overall_Ranking'])
+        sum_of_squared_distances.append(k_means.inertia_ * 10**-12)
+    elbow_values.append(k_vals)
+    elbow_values.append(sum_of_squared_distances)
+    final_elbow_vals = pd.DataFrame(elbow_values)
+    final_elbow_values = final_elbow_vals.T
+    final_elbow_values.columns = ['K', 'Value']
+    mapping = final_elbow_values.to_dict(orient="records")
+    chart_data = json.dumps(mapping, indent=2)
+    data = {'chart_data': chart_data}
 
     k_means = KMeans(n_clusters=4)
     model = k_means.fit(df1.loc[:, :'Overall_Ranking'])
@@ -255,11 +278,12 @@ def create_random_stratified_samples():
     df_strat_final = df_strat_samples.drop(columns='Cluster')
 
     df_strat_final.to_csv("random_stratified.csv", index=False)
+    return data
 
 if __name__ == "__main__":
     df1 = pd.read_csv("data_full.csv")
     create_random_samples()
     df2 = pd.read_csv("random_sample.csv")
-    create_random_stratified_samples()
+    elbow_vals = create_random_stratified_samples()
     df3 = pd.read_csv("random_stratified.csv")
     app.run(debug=True)

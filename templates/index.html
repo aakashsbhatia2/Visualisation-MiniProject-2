@@ -151,6 +151,12 @@ circle.hidden {
 <body>
     <ul>
         <li class="dropdown">
+            <a href="javascript:void(0)" class="dropbtn">K-Means Elbow</a>
+            <div class="dropdown-content">
+                <a href="#" onclick="create_elbow('elbow-k-means')">K-Means Elbow</a>
+            </div>
+        </li>
+        <li class="dropdown">
             <a href="javascript:void(0)" class="dropbtn">Task 1</a>
             <div class="dropdown-content">
                 <a href="#" onclick="create_scree_plot('screeplot_full_data')">PCA for Complete Dataset</a>
@@ -185,6 +191,7 @@ circle.hidden {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script>
 
+
 var tooltip = d3.select("body").append("div").attr("class", "toolTip");
 var ranks = ['0 to 100', '100 to 200', '200 to 300', '> 300'];
 var dimensionality = ['Intrinsic Dimensionality'];
@@ -216,6 +223,100 @@ function colorPicker_bar(v) {
     else {
         return "#87CEEB";
     }
+}
+
+function create_elbow(path)
+{
+    $.post(path, {'data': 'received'}, function (data_infunc) {
+        data = JSON.parse(data_infunc.chart_data);
+        console.log(data);
+        d3.select("svg").remove();
+
+        var margin = {top: 40, right: 20, bottom: 60, left: 100},
+            width = 1400 - margin.left - margin.right,
+            height = 700 - margin.top - margin.bottom;
+
+        var x = d3.scaleLinear()
+            .range([0, width]);
+        var y = d3.scaleLinear()
+            .range([height, 0]);
+
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")");
+
+        var valueline = d3.line()
+            .x(function(d) { return x(d.K); })
+            .y(function(d) { return y(d.Value); });
+
+        data.forEach(function (d) {
+            d.K = +d.K
+            d.Value = +d.Value;
+        });
+
+        x.domain([0,d3.max(data, function (d) {
+            return d.K;
+        })]);
+        y.domain([0, d3.max(data, function (d) {
+            return d.Value;
+        })]);
+
+        svg.append("path")
+                .data([data])
+                .attr("class", "line")
+                .attr("d", valueline);
+
+            svg.selectAll(".dot")
+                .data(data)
+                .enter().append("circle") // Uses the enter().append() method
+                .attr("class", "dot") // Assign a class for styling
+
+                .attr("cx", function(d) { return x(d.K) })
+                .attr("cy", function(d) { return y(d.Value) })
+                .attr("r", 5)
+                .style("fill", "blue")
+                .on("mouseover", function(d, i) {
+                    tooltip
+                        .style("left", d3.event.pageX - 50 + "px")
+                        .style("top", d3.event.pageY - 70 + "px")
+                        .style("display", "inline-block")
+                    .html("K: " + d.K + "<br>" + "Value: " + d.Value.toFixed(2));
+                    d3.select(this)
+                        .style("fill", "blue")
+                        .attr("r", 10) ; })
+
+                .on("mouseout", function() {
+                    tooltip
+                        .style("display", "none");
+                    d3.select(this)
+                        .style("fill", "blue")
+                        .attr("r", 5); });
+
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x));
+
+        svg.append("text")
+            .attr("transform", "translate(" + (width/2) + " ," + (height + margin.top) + ")")
+                .style("text-anchor", "middle")
+            .text("K Value");
+
+        // add the y Axis
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left+50)
+            .attr("x",0 - (height / 2))
+            .attr("dy", "1em")
+                .style("text-anchor", "middle")
+            .text("Value");
+    });
 }
 
 function create_scree_plot(path)
@@ -373,9 +474,6 @@ function create_scree_plot(path)
             .text(function(d) { return d; });
     });
 }
-
-
-create_scree_plot('screeplot_full_data');
 
 function generate_2d_scatterplot(path) {
     $.post(path, {'data': 'received'}, function(data_infunc) {
@@ -766,6 +864,9 @@ function generate_scatter_matrix(path) {
         }
     });
 }
+
+create_elbow('elbow-k-means');
+
 </script>
 
 </body>
