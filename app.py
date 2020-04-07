@@ -175,7 +175,7 @@ def calculate_top_PC_Vals(df):
     #Performing PCA for n=2
     pca = PCA(n_components=2)
 
-    #Scaling data using 
+    #Scaling data using Standard Scalar and appending the University, Country and Rank
     x = StandardScaler().fit_transform(df.loc[:, :'Overall_Ranking'])
     pc = pca.fit_transform(x)
     data = pca.explained_variance_ratio_
@@ -184,6 +184,7 @@ def calculate_top_PC_Vals(df):
     principal_Df['Country'] = df['Country']
     principal_Df['Rank'] = df['Rank']
 
+    #Formatting the data to send to the front end
     mapping = principal_Df.to_dict(orient="records")
     chart_data = json.dumps(mapping, indent=2)
     data = {'chart_data': chart_data}
@@ -225,13 +226,18 @@ def calculate_top_attributes(df, list_intrinsic_dimensions, count):
 
 def calculate_mds(df, distance):
     df_temp = df.loc[:, :'Overall_Ranking']
+
+    #Scale data
     df_scaled = StandardScaler().fit_transform(df_temp)
     df_scaled_final = pd.DataFrame(df_scaled)
+
+    #compute required pairwise distance
     matrix = metrics.pairwise.pairwise_distances(df_scaled_final, metric=distance)
     list_country = df['Country'].tolist()
     list_uni = df['University'].tolist()
     list_rank = df['Rank'].tolist()
 
+    #perform MDS
     mds = MDS(n_components=2, dissimilarity='precomputed', n_jobs=-1)
 
     values = mds.fit_transform(matrix)
